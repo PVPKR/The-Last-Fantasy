@@ -9,6 +9,8 @@ public class PlayerHealth : MonoBehaviour
     [Header("UI")]
     [SerializeField] private Slider healthSlider;
 
+    private PlayerRespawnSystem respawnSystem;
+
     public float CurrentHealth { get; private set; }
 
     public float MaxHealth => maxHealth;
@@ -18,6 +20,8 @@ public class PlayerHealth : MonoBehaviour
     private void Awake()
     {
         CurrentHealth = maxHealth;
+
+        respawnSystem = GetComponent<PlayerRespawnSystem>();
 
         InitializeHealthBar();
     }
@@ -77,8 +81,19 @@ public class PlayerHealth : MonoBehaviour
 
         maxHealth += amount;
 
-        // 증가한 HP만큼 현재 체력도 증가
         CurrentHealth += amount;
+
+        if (healthSlider != null)
+        {
+            healthSlider.maxValue = maxHealth;
+        }
+
+        UpdateHealthBar();
+    }
+
+    public void RestoreFullHealth()
+    {
+        CurrentHealth = maxHealth;
 
         if (healthSlider != null)
         {
@@ -100,7 +115,10 @@ public class PlayerHealth : MonoBehaviour
     {
         Debug.Log("Player Dead");
 
-        // 나중에 Game Over UI 연결
+        if (respawnSystem != null)
+        {
+            respawnSystem.HandleDeath();
+        }
     }
 
     [ContextMenu("Test Damage 10")]

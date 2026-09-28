@@ -30,21 +30,30 @@ public class PlayerCombat : MonoBehaviour
     private float lastAttackTime = -999f;
 
     private EnemyHealth currentTarget;
+
     private Coroutine coneCoroutine;
+
+    private GameAudioManager audioManager;
 
     public float AttackDamage => attackDamage;
 
     private void Start()
     {
+        // 공격 범위 원 숨기기
         if (attackRangeVisual != null)
         {
             attackRangeVisual.SetActive(false);
         }
 
+        // 부채꼴 공격 범위 숨기기
         if (attackConeVisual != null)
         {
             attackConeVisual.SetActive(false);
         }
+
+        // GameScene의 GameAudioManager 찾기
+        audioManager =
+            FindFirstObjectByType<GameAudioManager>();
     }
 
     private void Update()
@@ -52,19 +61,22 @@ public class PlayerCombat : MonoBehaviour
         if (playerRoot == null || characterModel == null)
             return;
 
-        // 주변에 몬스터가 있는지 확인
+        // 플레이어 주변에 몬스터가 있는지 확인
         Collider[] nearbyEnemies = Physics.OverlapSphere(
             playerRoot.position,
             detectionRange,
             enemyLayer
         );
 
-        bool hasEnemyNearby = nearbyEnemies.Length > 0;
+        bool hasEnemyNearby =
+            nearbyEnemies.Length > 0;
 
-        // 주변에 적이 있으면 원형 공격 범위 표시
+        // 몬스터가 근처에 있으면 원형 공격 범위 표시
         if (attackRangeVisual != null)
         {
-            attackRangeVisual.SetActive(hasEnemyNearby);
+            attackRangeVisual.SetActive(
+                hasEnemyNearby
+            );
         }
 
         // 공격 범위 안에서 가장 가까운 적 찾기
@@ -73,14 +85,17 @@ public class PlayerCombat : MonoBehaviour
         if (currentTarget == null)
             return;
 
-        // 현재 캐릭터가 몬스터를 얼마나 바라보고 있는지 확인
+        // 현재 캐릭터가 적을 얼마나 정확하게 바라보고 있는지 확인
         float angleToTarget =
-            GetAngleToTarget(currentTarget.transform);
+            GetAngleToTarget(
+                currentTarget.transform
+            );
 
-        // 적을 충분히 바라봤고 공격 쿨타임이 끝났다면 공격
+        // 적을 충분히 바라봤다면 공격
         if (angleToTarget <= attackRotationThreshold)
         {
-            if (Time.time >= lastAttackTime + attackCooldown)
+            if (Time.time >=
+                lastAttackTime + attackCooldown)
             {
                 Attack();
             }
@@ -89,23 +104,29 @@ public class PlayerCombat : MonoBehaviour
 
     private void LateUpdate()
     {
-        // 이동 방향 회전보다 전투 타겟 방향 회전을 우선
+        // 공격 대상이 있으면 이동 방향보다
+        // 몬스터 방향 회전을 우선
         if (currentTarget != null)
         {
-            RotateTowardsTarget(currentTarget.transform);
+            RotateTowardsTarget(
+                currentTarget.transform
+            );
         }
     }
 
     private EnemyHealth FindNearestEnemy()
     {
-        Collider[] enemies = Physics.OverlapSphere(
-            playerRoot.position,
-            attackRange,
-            enemyLayer
-        );
+        Collider[] enemies =
+            Physics.OverlapSphere(
+                playerRoot.position,
+                attackRange,
+                enemyLayer
+            );
 
         EnemyHealth nearestEnemy = null;
-        float nearestDistance = Mathf.Infinity;
+
+        float nearestDistance =
+            Mathf.Infinity;
 
         HashSet<EnemyHealth> checkedEnemies =
             new HashSet<EnemyHealth>();
@@ -118,18 +139,21 @@ public class PlayerCombat : MonoBehaviour
             if (enemyHealth == null)
                 continue;
 
+            // 죽은 몬스터 제외
             if (enemyHealth.CurrentHealth <= 0f)
                 continue;
 
+            // 같은 Enemy가 Collider를 여러 개 가지고 있을 경우 중복 방지
             if (checkedEnemies.Contains(enemyHealth))
                 continue;
 
             checkedEnemies.Add(enemyHealth);
 
-            float distance = Vector3.Distance(
-                playerRoot.position,
-                enemyHealth.transform.position
-            );
+            float distance =
+                Vector3.Distance(
+                    playerRoot.position,
+                    enemyHealth.transform.position
+                );
 
             if (distance < nearestDistance)
             {
@@ -141,10 +165,13 @@ public class PlayerCombat : MonoBehaviour
         return nearestEnemy;
     }
 
-    private void RotateTowardsTarget(Transform target)
+    private void RotateTowardsTarget(
+        Transform target
+    )
     {
         Vector3 direction =
-            target.position - characterModel.position;
+            target.position -
+            characterModel.position;
 
         direction.y = 0f;
 
@@ -152,26 +179,35 @@ public class PlayerCombat : MonoBehaviour
             return;
 
         Quaternion targetRotation =
-            Quaternion.LookRotation(direction.normalized);
+            Quaternion.LookRotation(
+                direction.normalized
+            );
 
-        characterModel.rotation = Quaternion.Slerp(
-            characterModel.rotation,
-            targetRotation,
-            attackRotationSpeed * Time.deltaTime
-        );
+        characterModel.rotation =
+            Quaternion.Slerp(
+                characterModel.rotation,
+                targetRotation,
+                attackRotationSpeed *
+                Time.deltaTime
+            );
     }
 
-    private float GetAngleToTarget(Transform target)
+    private float GetAngleToTarget(
+        Transform target
+    )
     {
         Vector3 direction =
-            target.position - characterModel.position;
+            target.position -
+            characterModel.position;
 
         direction.y = 0f;
 
         if (direction.sqrMagnitude <= 0.01f)
             return 0f;
 
-        Vector3 forward = characterModel.forward;
+        Vector3 forward =
+            characterModel.forward;
+
         forward.y = 0f;
 
         return Vector3.Angle(
@@ -184,22 +220,32 @@ public class PlayerCombat : MonoBehaviour
     {
         lastAttackTime = Time.time;
 
+        // 공격 애니메이션
         if (animator != null)
         {
             animator.SetTrigger("Attack");
         }
 
-        // 공격 순간 부채꼴 범위 표시
+        // 공격 효과음
+        if (audioManager != null)
+        {
+            audioManager.PlayAttackSound();
+        }
+
+        // 부채꼴 공격 범위 잠깐 표시
         if (attackConeVisual != null)
         {
             if (coneCoroutine != null)
             {
-                StopCoroutine(coneCoroutine);
+                StopCoroutine(
+                    coneCoroutine
+                );
             }
 
-            coneCoroutine = StartCoroutine(
-                ShowAttackCone()
-            );
+            coneCoroutine =
+                StartCoroutine(
+                    ShowAttackCone()
+                );
         }
     }
 
@@ -219,13 +265,20 @@ public class PlayerCombat : MonoBehaviour
     // Attack 애니메이션의 Animation Event에서 호출
     public void DealDamage()
     {
-        Collider[] enemies = Physics.OverlapSphere(
-            playerRoot.position,
-            attackRange,
-            enemyLayer
-        );
+        if (playerRoot == null ||
+            characterModel == null)
+            return;
 
-        Vector3 forward = characterModel.forward;
+        Collider[] enemies =
+            Physics.OverlapSphere(
+                playerRoot.position,
+                attackRange,
+                enemyLayer
+            );
+
+        Vector3 forward =
+            characterModel.forward;
+
         forward.y = 0f;
 
         HashSet<EnemyHealth> damagedEnemies =
@@ -242,28 +295,35 @@ public class PlayerCombat : MonoBehaviour
             if (enemyHealth.CurrentHealth <= 0f)
                 continue;
 
+            // Collider가 여러 개 있어도 한 번만 데미지
             if (damagedEnemies.Contains(enemyHealth))
                 continue;
 
             Vector3 direction =
-                enemyHealth.transform.position - playerRoot.position;
+                enemyHealth.transform.position -
+                playerRoot.position;
 
             direction.y = 0f;
 
             if (direction.sqrMagnitude <= 0.01f)
                 continue;
 
-            float angle = Vector3.Angle(
-                forward.normalized,
-                direction.normalized
-            );
+            float angle =
+                Vector3.Angle(
+                    forward.normalized,
+                    direction.normalized
+                );
 
-            // 정면 부채꼴 범위 안에 있는 적만 공격
+            // 실제 부채꼴 공격 범위 판정
             if (angle <= attackAngle * 0.5f)
             {
-                enemyHealth.TakeDamage(attackDamage);
+                enemyHealth.TakeDamage(
+                    attackDamage
+                );
 
-                damagedEnemies.Add(enemyHealth);
+                damagedEnemies.Add(
+                    enemyHealth
+                );
             }
         }
     }
@@ -276,6 +336,9 @@ public class PlayerCombat : MonoBehaviour
 
         attackDamage += amount;
 
-        Debug.Log("Attack Damage: " + attackDamage);
+        Debug.Log(
+            "Attack Damage : " +
+            attackDamage
+        );
     }
 }
